@@ -1,0 +1,1025 @@
+لبناء تطبيق «مِداد AI» لنظامي Android و iOS (Apple) من كود واحد مع الحفاظ على التصميم العربي (RTL)، جميع المناهج السعودية، تخصصات كلية التربية (علوم الرياضة والنشاط البدني والفنون الجميلة)، ميزة رفع الملفات والشروحات، ومؤقت البومودورو، فإن أفضل تقنية حديثة ومعتمدة هي Flutter (من جوجل بلغة Dart) لأنها تُخرج تطبيقاً أصيلاً (Native) فائق السرعة لمتجر Google Play ومتجر App Store بنفس الكود.
+فيما يلي الدليل الكامل والكود البرمجي الجاهز للتشغيل لتطبيق «مِداد AI» بنظام Flutter:
+أولاً: هيكل المشروع والإعدادات (pubspec.yaml)
+أنشئ مشروع Flutter جديد عبر الأمر:
+flutter create midad_ai
+
+ثم استبدل محتوى ملف pubspec.yaml بالتالي لإضافة الخطوط العربية، اختيار الملفات، والاتصال بالذكاء الاصطناعي:
+name: midad_ai
+description: مِداد AI - رفيقك الذكي للتميّز الدراسي والجامعي في المملكة
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  google_fonts: ^6.2.1        # خط Cairo العربي العصري
+  file_picker: ^8.0.0         # لرفع ملفات PDF و Word والصور
+  http: ^1.2.1                # للاتصال بواجهة الذكاء الاصطناعي Gemini API
+  shared_preferences: ^2.2.3  # لحفظ مهام المذاكرة والبيانات محلياً
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+ثانياً: الكود الكامل للتطبيق (lib/main.dart)
+انسخ هذا الكود بالكامل وضعه في ملف lib/main.dart. يتضمن الكود 4 شاشات رئيسية متكاملة (المناهج السعودية والجامعات، المعلم الذكي، مختبر الملفات والشروحات، ومخطط المذاكرة مع مؤقت بومودورو) مع دعم الربط الحقيقي بـ Gemini API:
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:http/http.dart' as http;
+
+void main() {
+  runApp(const MidadAIApp());
+}
+
+// ---------------------------------------------------------------------------
+// 1. إعدادات التطبيق والهوية البصرية (مِداد AI)
+// ---------------------------------------------------------------------------
+class MidadAIApp extends StatelessWidget {
+  const MidadAIApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'مِداد AI',
+      debugShowCheckedModeBanner: false,
+      locale: const Locale('ar', 'SA'),
+      supportedLocales: const [Locale('ar', 'SA')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      theme: ThemeData(
+        useMaterial3: true,
+        textTheme: GoogleFonts.cairoTextTheme(),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF059669), // الأخضر الزمردي السعودي
+          primary: const Color(0xFF059669),
+          secondary: const Color(0xFF4F46E5), // الأزرق البنفسجي التفاعلي
+        ),
+        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+      ),
+      home: const MainNavigationScreen(),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 2. قاعدة بيانات المناهج والجامعات السعودية
+// ---------------------------------------------------------------------------
+class SaudiCurriculumData {
+  static const List<String> universities = [
+    'جامعة الملك فيصل',
+    'جامعة الملك سعود',
+    'جامعة الملك عبدالعزيز',
+    'جامعة الملك فهد للبترول والمعادن',
+    'جامعة الإمام محمد بن سعود الإسلامية',
+    'جامعة أم القرى',
+    'الجامعة السعودية الإلكترونية',
+    'جامعة الملك خالد',
+    'جامعة طيبة',
+    'جامعة القصيم',
+  ];
+
+  static const Map<String, Map<String, List<String>>> collegeMajors = {
+    'كلية التربية': {
+      'علوم الرياضة والنشاط البدني': [
+        'مبادئ علم الحركة',
+        'فسيولوجيا الجهد البدني',
+        'تخطيط التدريب الرياضي',
+        'أسس التهيئة البدنية',
+        'النمو والتطور الحركي',
+        'الأنشطة البدنية والرياضية المعدلة',
+        'الرياضة للجميع والبرامج الترويحية',
+        'كرة السلة',
+        'كرة اليد',
+        'كرة القدم',
+        'مبادئ ألعاب المضرب',
+      ],
+      'الفنون الجميلة (التربية الفنية)': [
+        'الفنون التشكيلية والمجتمع',
+        'أساسيات الرسم والتصوير',
+        'التصميم والزخرفة',
+        'النحت والخزف',
+        'تاريخ الفن وتذوقه',
+        'الأشغال الفنية والطباعة',
+      ],
+      'المناهج وطرق التدريس': [
+        'استراتيجيات التدريس الحديثة',
+        'تصميم المناهج وتطويرها',
+        'التقويم التربوي والاختبارات',
+      ],
+    },
+    'كلية علوم الحاسب وتقنية المعلومات': {
+      'علوم الحاسب والذكاء الاصطناعي': [
+        'البرمجة الكائنية (OOP)',
+        'تراكيب البيانات والخوارزميات',
+        'قواعد البيانات',
+        'مقدمة في الذكاء الاصطناعي',
+      ],
+    },
+    'الكليات الصحية والطبية': {
+      'الطب والعلوم الطبية التطبيقية': [
+        'التشريح البشري (Anatomy)',
+        'علم وظائف الأعضاء (Physiology)',
+        'الكيمياء الحيوية',
+      ],
+    },
+    'كلية إدارة الأعمال': {
+      'الإدارة والمالية': [
+        'مبادئ الإدارة والأعمال',
+        'المحاسبة المالية',
+        'الاقتصاد الجزئي والكلي',
+      ],
+    },
+  };
+
+  static const Map<String, List<String>> generalEducation = {
+    'المرحلة الابتدائية': ['لغتي الجميلة', 'الرياضيات', 'العلوم', 'الدراسات الإسلامية', 'التربية البدنية والفنية'],
+    'المرحلة المتوسطة': ['لغتي الخالدة', 'الرياضيات', 'العلوم', 'الدراسات الاجتماعية', 'المهارات الرقمية'],
+    'المرحلة الثانوية (نظام المسارات)': [
+      'الرياضيات (1 - 3)',
+      'الفيزياء',
+      'الكيمياء',
+      'الأحياء',
+      'اللغة الإنجليزية (Mega Goal)',
+      'القدرات العامة (كمي ولفظي)',
+      'الاختبار التحصيلي العلمي',
+    ],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 3. خدمة الاتصال بالذكاء الاصطناعي (Gemini API)
+// ---------------------------------------------------------------------------
+class GeminiAIService {
+  // ضع مفتاح API الخاص بك من Google AI Studio هنا
+  static const String apiKey = 'YOUR_GEMINI_API_KEY_HERE';
+
+  static Future<String> askMidad({
+    required String prompt,
+    required String contextInfo,
+    File? attachedFile,
+  }) async {
+    if (apiKey == 'YOUR_GEMINI_API_KEY_HERE' || apiKey.isEmpty) {
+      await Future.delayed(const Duration(seconds: 1));
+      return '✨ **استجابة مِداد AI التجريبية**\n\n'
+          '📌 **السياق المختار:** $contextInfo\n\n'
+          'بناءً على سؤالك حول: *"$prompt"*، إليك الشرح المنظم:\n'
+          '1. **المفهوم الأساسي:** يرتكز هذا الموضوع في المنهج السعودي على فهم القواعد التطبيقية وربطها بالواقع العملي.\n'
+          '2. **نقاط المراجعة السريعة:** ركّز على المصطلحات المفتاحية، التسلسل الفني والخطوات التطبيقية.\n'
+          '3. **سؤال تدريبي:** ما هو العامل الأهم المؤثر في تحقيق الأداء الأمثل ضمن هذا المقرر؟\n\n'
+          '💡 *ملاحظة: لتفعيل الذكاء الاصطناعي الحي، أضف مفتاح Gemini API في ملف `main.dart`.*';
+    }
+
+    try {
+      final url = Uri.parse(
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey',
+      );
+
+      final List> parts = [
+        {
+          'text': 'أنت "مِداد AI"، مساعد دراسي ذكي متخصص في المناهج السعودية والجامعية. '
+              'السياق الحالي للطالب: $contextInfo.\n'
+              'أجب باللغة العربية بأسلوب واضح، منظم، ومشجع مع نقاط وتلخيص:\n\n$prompt'
+        }
+      ];
+
+      if (attachedFile != null && await attachedFile.exists()) {
+        final bytes = await attachedFile.readAsBytes();
+        final base64Data = base64Encode(bytes);
+        final ext = attachedFile.path.split('.').last.toLowerCase();
+        String mimeType = 'application/pdf';
+        if (ext == 'png') mimeType = 'image/png';
+        if (ext == 'jpg' || ext == 'jpeg') mimeType = 'image/jpeg';
+
+        if (['pdf', 'png', 'jpg', 'jpeg'].contains(ext)) {
+          parts.add({
+            'inline_data': {'mime_type': mimeType, 'data': base64Data}
+          });
+        }
+      }
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'contents': [
+            {'parts': parts}
+          ]
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['candidates'][0]['content']['parts'][0]['text'] ?? 'لم يتم استلام رد.';
+      } else {
+        return 'حدث خطأ في الاتصال بالخادم (${response.statusCode}).';
+      }
+    } catch (e) {
+      return 'تعذر الاتصال بالإنترنت: $e';
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 4. الشاشة الرئيسية والتنقل السفلي
+// ---------------------------------------------------------------------------
+class MainNavigationScreen extends StatefulWidget {
+  const MainNavigationScreen({super.key});
+
+  @override
+  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
+}
+
+class _MainNavigationScreenState extends State<MainNavigationScreen> {
+  int _selectedIndex = 0;
+
+  // حالة المسار الدراسي المختار
+  bool _isUniversity = true;
+  String _selectedUniversity = 'جامعة الملك فيصل';
+  String _selectedCollege = 'كلية التربية';
+  String _selectedMajor = 'علوم الرياضة والنشاط البدني';
+  String _selectedGeneralStage = 'المرحلة الثانوية (نظام المسارات)';
+  String _selectedCourse = 'مبادئ علم الحركة';
+
+  String get currentContextLabel {
+    if (_isUniversity) {
+      return '$_selectedUniversity • $_selectedCollege • $_selectedMajor • مقرر: $_selectedCourse';
+    } else {
+      return 'التعليم العام السعودي • $_selectedGeneralStage • مادة: $_selectedCourse';
+    }
+  }
+
+  void _updateSelection({
+    bool? isUni,
+    String? uni,
+    String? college,
+    String? major,
+    String? stage,
+    String? course,
+  }) {
+    setState(() {
+      if (isUni != null) _isUniversity = isUni;
+      if (uni != null) _selectedUniversity = uni;
+      if (college != null) _selectedCollege = college;
+      if (major != null) _selectedMajor = major;
+      if (stage != null) _selectedGeneralStage = stage;
+      if (course != null) _selectedCourse = course;
+    });
+  }
+
+  void _openChatWithPrompt(String prompt) {
+    setState(() => _selectedIndex = 1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screens = [
+      CurriculumExplorerScreen(
+        isUniversity: _isUniversity,
+        selectedUniversity: _selectedUniversity,
+        selectedCollege: _selectedCollege,
+        selectedMajor: _selectedMajor,
+        selectedGeneralStage: _selectedGeneralStage,
+        selectedCourse: _selectedCourse,
+        onUpdate: _updateSelection,
+        onStartStudying: () => setState(() => _selectedIndex = 1),
+      ),
+      AITutorChatScreen(contextLabel: currentContextLabel),
+      FileExplainerScreen(contextLabel: currentContextLabel),
+      const StudyPlannerScreen(),
+    ];
+
+    return Scaffold(
+      appBar: AppBar(
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF059669), Color(0xFF4F46E5)],
+              begin: Alignment.centerRight,
+              end: Alignment.centerLeft,
+            ),
+          ),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.auto_awesome, color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: 10),
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'مِداد AI',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 19),
+                ),
+                Text(
+                  'رفيقك الذكي للتميّز الدراسي والجامعي',
+                  style: TextStyle(color: Colors.white70, fontSize: 11),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      body: screens[_selectedIndex],
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (idx) => setState(() => _selectedIndex = idx),
+        indicatorColor: const Color(0xFF059669).withOpacity(0.15),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.school_outlined), selectedIcon: Icon(Icons.school), label: 'المناهج'),
+          NavigationDestination(icon: Icon(Icons.psychology_outlined), selectedIcon: Icon(Icons.psychology), label: 'المعلم الذكي'),
+          NavigationDestination(icon: Icon(Icons.upload_file_outlined), selectedIcon: Icon(Icons.upload_file), label: 'الملفات'),
+          NavigationDestination(icon: Icon(Icons.timer_outlined), selectedIcon: Icon(Icons.timer), label: 'مخططي'),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 5. شاشة استعراض الجامعات والمناهج السعودية
+// ---------------------------------------------------------------------------
+class CurriculumExplorerScreen extends StatelessWidget {
+  final bool isUniversity;
+  final String selectedUniversity;
+  final String selectedCollege;
+  final String selectedMajor;
+  final String selectedGeneralStage;
+  final String selectedCourse;
+  final Function({bool? isUni, String? uni, String? college, String? major, String? stage, String? course}) onUpdate;
+  final VoidCallback onStartStudying;
+
+  const CurriculumExplorerScreen({
+    super.key,
+    required this.isUniversity,
+    required this.selectedUniversity,
+    required this.selectedCollege,
+    required this.selectedMajor,
+    required this.selectedGeneralStage,
+    required this.selectedCourse,
+    required this.onUpdate,
+    required this.onStartStudying,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final List<String> courses = isUniversity
+        ? (SaudiCurriculumData.collegeMajors[selectedCollege]?[selectedMajor] ?? [])
+        : (SaudiCurriculumData.generalEducation[selectedGeneralStage] ?? []);
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // مفتاح التبديل بين التعليم الجامعي والتعليم العام
+        SegmentedButton<bool>(
+          segments: const [
+            ButtonSegment(value: true, label: Text('التعليم الجامعي'), icon: Icon(Icons.account_balance)),
+            ButtonSegment(value: false, label: Text('التعليم العام وقياس'), icon: Icon(Icons.menu_book)),
+          ],
+          selected: {isUniversity},
+          onSelectionChanged: (set) {
+            final uniMode = set.first;
+            if (uniMode) {
+              onUpdate(
+                isUni: true,
+                college: 'كلية التربية',
+                major: 'علوم الرياضة والنشاط البدني',
+                course: 'مبادئ علم الحركة',
+              );
+            } else {
+              onUpdate(
+                isUni: false,
+                stage: 'المرحلة الثانوية (نظام المسارات)',
+                course: 'الرياضيات (1 - 3)',
+              );
+            }
+          },
+        ),
+        const SizedBox(height: 16),
+
+        if (isUniversity) ...[
+          _buildDropdownCard(
+            title: 'الجامعة السعودية',
+            icon: Icons.location_city,
+            value: selectedUniversity,
+            items: SaudiCurriculumData.universities,
+            onChanged: (val) => onUpdate(uni: val),
+          ),
+          const SizedBox(height: 12),
+          _buildDropdownCard(
+            title: 'الكلية',
+            icon: Icons.domain,
+            value: selectedCollege,
+            items: SaudiCurriculumData.collegeMajors.keys.toList(),
+            onChanged: (val) {
+              final firstMajor = SaudiCurriculumData.collegeMajors[val]!.keys.first;
+              final firstCourse = SaudiCurriculumData.collegeMajors[val]![firstMajor]!.first;
+              onUpdate(college: val, major: firstMajor, course: firstCourse);
+            },
+          ),
+          const SizedBox(height: 12),
+          _buildDropdownCard(
+            title: 'التخصص الأكاديمي',
+            icon: Icons.workspace_premium,
+            value: selectedMajor,
+            items: SaudiCurriculumData.collegeMajors[selectedCollege]!.keys.toList(),
+            onChanged: (val) {
+              final firstCourse = SaudiCurriculumData.collegeMajors[selectedCollege]![val]!.first;
+              onUpdate(major: val, course: firstCourse);
+            },
+          ),
+        ] else ...[
+          _buildDropdownCard(
+            title: 'المرحلة الدراسية',
+            icon: Icons.stairs,
+            value: selectedGeneralStage,
+            items: SaudiCurriculumData.generalEducation.keys.toList(),
+            onChanged: (val) {
+              final firstCourse = SaudiCurriculumData.generalEducation[val]!.first;
+              onUpdate(stage: val, course: firstCourse);
+            },
+          ),
+        ],
+
+        const SizedBox(height: 20),
+        const Text(
+          'المقررات والمواد الدراسية المتاحة:',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 10),
+
+        ...courses.map((course) {
+          final isSelected = course == selectedCourse;
+          return Card(
+            elevation: isSelected ? 2 : 0,
+            color: isSelected ? const Color(0xFFECFDF5) : Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(
+                color: isSelected ? const Color(0xFF059669) : Colors.grey.shade200,
+                width: isSelected ? 1.5 : 1,
+              ),
+            ),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: isSelected ? const Color(0xFF059669) : Colors.grey.shade100,
+                child: Icon(
+                  Icons.book,
+                  color: isSelected ? Colors.white : Colors.grey.shade700,
+                  size: 20,
+                ),
+              ),
+              title: Text(course, style: const TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: Text(isSelected ? 'المقرر النشط حالياً' : 'اضغط للاختيار وبدء المذاكرة'),
+              trailing: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF059669),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: () {
+                  onUpdate(course: course);
+                  onStartStudying();
+                },
+                child: const Text('ادرس الآن'),
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildDropdownCard({
+    required String title,
+    required IconData icon,
+    required String value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFF059669)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                isExpanded: true,
+                value: items.contains(value) ? value : items.first,
+                items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                onChanged: onChanged,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 6. شاشة المعلم الذكي التفاعلي (AI Tutor)
+// ---------------------------------------------------------------------------
+class AITutorChatScreen extends StatefulWidget {
+  final String contextLabel;
+  const AITutorChatScreen({super.key, required this.contextLabel});
+
+  @override
+  State<AITutorChatScreen> createState() => _AITutorChatScreenState();
+}
+
+class _AITutorChatScreenState extends State<AITutorChatScreen> {
+  final TextEditingController _controller = TextEditingController();
+  final List> _messages = [];
+  bool _isLoading = false;
+  File? _attachedFile;
+
+  @override
+  void initState() {
+    super.initState();
+    _messages.add({
+      'role': 'ai',
+      'text': 'أهلاً بك في **مِداد AI**! 👋\nأنا جاهز لمساعدتك في:\n**${widget.contextLabel}**\n\nاطلب شرح درس، تلخيص فصل، أو إنشاء كويز تدريبي!'
+    });
+  }
+
+  Future<void> _pickAttachment() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx', 'pptx'],
+    );
+    if (result != null && result.files.single.path != null) {
+      setState(() => _attachedFile = File(result.files.single.path!));
+    }
+  }
+
+  Future<void> _sendMessage([String? quickPrompt]) async {
+    final text = quickPrompt ?? _controller.text.trim();
+    if (text.isEmpty && _attachedFile == null) return;
+
+    final fileToSend = _attachedFile;
+    setState(() {
+      _messages.add({
+        'role': 'user',
+        'text': fileToSend != null ? '📎 [مرفق: ${fileToSend.path.split('/').last}]\n$text' : text,
+      });
+      _isLoading = true;
+      _attachedFile = null;
+    });
+    _controller.clear();
+
+    final reply = await GeminiAIService.askMidad(
+      prompt: text.isEmpty ? 'اشرح هذا الملف ولخص أهم نقاطه' : text,
+      contextInfo: widget.contextLabel,
+      attachedFile: fileToSend,
+    );
+
+    setState(() {
+      _messages.add({'role': 'ai', 'text': reply});
+      _isLoading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // شريط السياق النشط
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          color: const Color(0xFFECFDF5),
+          child: Text(
+            '📚 ${widget.contextLabel}',
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF065F46)),
+          ),
+        ),
+
+        // أزرار الأوامر السريعة
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: [
+              _quickChip('اشرح لي أهم مفاهيم المقرر', Icons.lightbulb_outline),
+              const SizedBox(width: 8),
+              _quickChip('لخّص المقرر في نقاط للمراجعة', Icons.summarize_outlined),
+              const SizedBox(width: 8),
+              _quickChip('اختبرني بـ 5 أسئلة اختيار من متعدد', Icons.quiz_outlined),
+            ],
+          ),
+        ),
+
+        // قائمة الرسائل
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.all(14),
+            itemCount: _messages.length,
+            itemBuilder: (context, index) {
+              final msg = _messages[index];
+              final isUser = msg['role'] == 'user';
+              return Align(
+                alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(14),
+                  constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.82),
+                  decoration: BoxDecoration(
+                    color: isUser ? const Color(0xFF059669) : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2)),
+                    ],
+                  ),
+                  child: Text(
+                    msg['text']!,
+                    style: TextStyle(color: isUser ? Colors.white : Colors.black87, height: 1.5),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+
+        if (_isLoading)
+          const Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                SizedBox(width: 10),
+                Text('مِداد AI يجهز لك الإجابة...', style: TextStyle(fontSize: 12)),
+              ],
+            ),
+          ),
+
+        if (_attachedFile != null)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            color: Colors.indigo.shade50,
+            child: Row(
+              children: [
+                const Icon(Icons.attach_file, size: 18, color: Colors.indigo),
+                const SizedBox(width: 6),
+                Expanded(child: Text(_attachedFile!.path.split('/').last, overflow: TextOverflow.ellipsis)),
+                IconButton(icon: const Icon(Icons.close, size: 18), onPressed: () => setState(() => _attachedFile = null)),
+              ],
+            ),
+          ),
+
+        // حقل الإدخال
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Colors.grey.shade200))),
+          child: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.attach_file, color: Color(0xFF4F46E5)),
+                onPressed: _pickAttachment,
+                tooltip: 'إرفاق ملف أو صورة',
+              ),
+              Expanded(
+                child: TextField(
+                  controller: _controller,
+                  decoration: const InputDecoration(
+                    hintText: 'اكتب سؤالك هنا...',
+                    border: InputBorder.none,
+                  ),
+                  onSubmitted: (_) => _sendMessage(),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.send_rounded, color: Color(0xFF059669)),
+                onPressed: () => _sendMessage(),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _quickChip(String label, IconData icon) {
+    return ActionChip(
+      avatar: Icon(icon, size: 16, color: const Color(0xFF059669)),
+      label: Text(label, style: const TextStyle(fontSize: 12)),
+      backgroundColor: Colors.white,
+      onPressed: () => _sendMessage(label),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 7. شاشة مختبر الملفات والشروحات الذكية
+// ---------------------------------------------------------------------------
+class FileExplainerScreen extends StatefulWidget {
+  final String contextLabel;
+  const FileExplainerScreen({super.key, required this.contextLabel});
+
+  @override
+  State<FileExplainerScreen> createState() => _FileExplainerScreenState();
+}
+
+class _FileExplainerScreenState extends State<FileExplainerScreen> {
+  File? _selectedFile;
+  String _fileName = '';
+  String _analysisResult = '';
+  bool _analyzing = false;
+
+  Future<void> _chooseFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'doc', 'docx', 'pptx', 'txt', 'png', 'jpg', 'jpeg'],
+    );
+    if (result != null && result.files.single.path != null) {
+      setState(() {
+        _selectedFile = File(result.files.single.path!);
+        _fileName = result.files.single.name;
+        _analysisResult = '';
+      });
+    }
+  }
+
+  Future<void> _analyzeFile(String mode) async {
+    setState(() => _analyzing = true);
+    final res = await GeminiAIService.askMidad(
+      prompt: 'المطلوب للملف المرفق ($_fileName): $mode',
+      contextInfo: widget.contextLabel,
+      attachedFile: _selectedFile,
+    );
+    setState(() {
+      _analysisResult = res;
+      _analyzing = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        InkWell(
+          onTap: _chooseFile,
+          borderRadius: BorderRadius.circular(18),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0xFF059669), width: 1.5),
+            ),
+            child: Column(
+              children: [
+                const Icon(Icons.cloud_upload_outlined, size: 48, color: Color(0xFF059669)),
+                const SizedBox(height: 10),
+                Text(
+                  _fileName.isEmpty ? 'اضغط لرفع ملف المحاضرة أو الكتاب' : 'الملف المختار: $_fileName',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'يدعم: PDF, Word, PowerPoint, الصور والنصوص',
+                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        if (_fileName.isNotEmpty) ...[
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ElevatedButton.icon(
+                onPressed: _analyzing ? null : () => _analyzeFile('اشرح الملف شرحاً مبسطاً ومفصلاً خطوة بخطوة'),
+                icon: const Icon(Icons.auto_stories, size: 18),
+                label: const Text('شرح مبسط ومفصل'),
+              ),
+              ElevatedButton.icon(
+                onPressed: _analyzing ? null : () => _analyzeFile('لخّص الملف في نقاط وجداول مقارنة للمراجعة النهائية'),
+                icon: const Icon(Icons.table_chart, size: 18),
+                label: const Text('تلخيص وجداول مقارنة'),
+              ),
+              ElevatedButton.icon(
+                onPressed: _analyzing ? null : () => _analyzeFile('أنشئ 5 أسئلة اختبارية مع الإجابات من محتوى الملف'),
+                icon: const Icon(Icons.quiz, size: 18),
+                label: const Text('أسئلة مراجعة من الملف'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        if (_analyzing) const Center(child: CircularProgressIndicator()),
+
+        if (_analysisResult.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: SelectableText(_analysisResult, style: const TextStyle(height: 1.6)),
+          ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 8. شاشة مخطط المذاكرة ومؤقت بومودورو
+// ---------------------------------------------------------------------------
+class StudyPlannerScreen extends StatefulWidget {
+  const StudyPlannerScreen({super.key});
+
+  @override
+  State<StudyPlannerScreen> createState() => _StudyPlannerScreenState();
+}
+
+class _StudyPlannerScreenState extends State<StudyPlannerScreen> {
+  int _secondsRemaining = 25 * 60;
+  Timer? _timer;
+  bool _isRunning = false;
+
+  final List> _tasks = [
+    {'title': 'مراجعة محاضرة مبادئ علم الحركة', 'done': false},
+    {'title': 'تلخيص فصل الفنون التشكيلية والمجتمع', 'done': false},
+  ];
+  final TextEditingController _taskCtrl = TextEditingController();
+
+  void _toggleTimer() {
+    if (_isRunning) {
+      _timer?.cancel();
+      setState(() => _isRunning = false);
+    } else {
+      setState(() => _isRunning = true);
+      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (_secondsRemaining > 0) {
+          setState(() => _secondsRemaining--);
+        } else {
+          timer.cancel();
+          setState(() => _isRunning = false);
+        }
+      });
+    }
+  }
+
+  void _resetTimer() {
+    _timer?.cancel();
+    setState(() {
+      _isRunning = false;
+      _secondsRemaining = 25 * 60;
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final minutes = (_secondsRemaining ~/ 60).toString().padLeft(2, '0');
+    final seconds = (_secondsRemaining % 60).toString().padLeft(2, '0');
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // بطاقة مؤقت بومودورو
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFF059669), Color(0xFF4F46E5)]),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            children: [
+              const Text('مؤقت التركيز (بومودورو)', style: TextStyle(color: Colors.white70, fontSize: 14)),
+              const SizedBox(height: 8),
+              Text(
+                '$minutes:$seconds',
+                style: const TextStyle(color: Colors.white, fontSize: 48, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _toggleTimer,
+                    icon: Icon(_isRunning ? Icons.pause : Icons.play_arrow),
+                    label: Text(_isRunning ? 'إيقاف مؤقت' : 'ابدأ الجلسة'),
+                  ),
+                  const SizedBox(width: 12),
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: Colors.white)),
+                    onPressed: _resetTimer,
+                    child: const Text('إعادة ضبط'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 20),
+        const Text('قائمة مهام المذاكرة اليومية', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 10),
+
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _taskCtrl,
+                decoration: InputDecoration(
+                  hintText: 'أضف مهمة مذاكرة جديدة...',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton.filled(
+              style: IconButton.styleFrom(backgroundColor: const Color(0xFF059669)),
+              icon: const Icon(Icons.add),
+              onPressed: () {
+                if (_taskCtrl.text.trim().isNotEmpty) {
+                  setState(() {
+                    _tasks.add({'title': _taskCtrl.text.trim(), 'done': false});
+                    _taskCtrl.clear();
+                  });
+                }
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        ..._tasks.map((task) => CheckboxListTile(
+              value: task['done'],
+              title: Text(
+                task['title'],
+                style: TextStyle(decoration: task['done'] ? TextDecoration.lineThrough : null),
+              ),
+              onChanged: (val) => setState(() => task['done'] = val),
+            )),
+      ],
+    );
+  }
+}
+
+ثالثاً: خطوات تصدير التطبيق لنظامي Android و Apple (iOS)
+ * تفعيل الذكاء الاصطناعي الحقيقي:
+   * احصل على مفتاح مجاني من موقع Google AI Studio وضعه مكان YOUR_GEMINI_API_KEY_HERE في الكود أعلاه.
+ * لإخراج نسخة الأندرويد (APK / App Bundle):
+   * نفّذ الأمر التالي في الطرفية (Terminal):
+     flutter build apk --release
+
+   * ستجد ملف التثبيت جاهزاً في المسار: build/app/outputs/flutter-apk/app-release.apk.
+ * لإخراج نسخة الآيفون والآيباد (iOS / iPadOS):
+   * على جهاز Mac مثبت عليه Xcode، نفّذ الأمر:
+     flutter build ipa
+
+   * أضف صلاحيات الوصول للملفات والصور في ملف ios/Runner/Info.plist:
+     <key>NSPhotoLibraryUsageDescription</key>
+<string>يحتاج تطبيق مِداد AI للوصول إلى الصور لرفع صفحات الكتب وشرحها</string>
+
+هل تود إضافة ميزة تسجيل الدخول بحساب الطالب أو قاعدة بيانات سحابية (Firebase) لحفظ المحادثات والملفات بين الآيفون والآيباد؟

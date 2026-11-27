@@ -1,0 +1,118 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-display: "Cairo", "Plus Jakarta Sans", "IBM Plex Sans Arabic", system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans Arabic", "Plus Jakarta Sans", "Cairo", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@theme inline {
+  --color-saudi-canvas: var(--saudi-canvas);
+  --color-saudi-surface: var(--saudi-surface);
+  --color-saudi-subtle: var(--saudi-subtle);
+  --color-saudi-hover: var(--saudi-hover);
+  --color-saudi-border: var(--saudi-border);
+  --color-saudi-border-strong: var(--saudi-border-strong);
+  --color-saudi-ink: var(--saudi-ink);
+  --color-saudi-ink-secondary: var(--saudi-ink-secondary);
+  --color-saudi-muted: var(--saudi-muted);
+  --color-saudi-palm: var(--saudi-palm);
+  --color-saudi-palm-hover: var(--saudi-palm-hover);
+  --color-saudi-palm-soft: var(--saudi-palm-soft);
+  --color-saudi-palm-border: var(--saudi-palm-border);
+  --color-saudi-palm-text: var(--saudi-palm-text);
+  --color-saudi-sand-accent: var(--saudi-sand-accent);
+  --color-saudi-sand-soft: var(--saudi-sand-soft);
+  --color-saudi-sand-border: var(--saudi-sand-border);
+  --color-saudi-sand-text: var(--saudi-sand-text);
+  --color-saudi-volcanic: var(--saudi-volcanic);
+  --color-saudi-volcanic-hover: var(--saudi-volcanic-hover);
+  --color-saudi-ring-track: var(--saudi-ring-track);
+}
+
+@layer base {
+  /* Light mode: Nafud desert sands, Najdi limestone & oasis palm */
+  :root {
+    --saudi-canvas: #f5efe2;
+    --saudi-surface: #fffcf5;
+    --saudi-subtle: #ebe3d2;
+    --saudi-hover: #e3d9c4;
+    --saudi-border: #dcd1ba;
+    --saudi-border-strong: #c7b89c;
+    --saudi-ink: #1e241f;
+    --saudi-ink-secondary: #3f473f;
+    --saudi-muted: #62695e;
+    --saudi-palm: #15803d;
+    --saudi-palm-hover: #166534;
+    --saudi-palm-soft: #e6f3ea;
+    --saudi-palm-border: #b6d8c0;
+    --saudi-palm-text: #14532d;
+    --saudi-sand-accent: #b45309;
+    --saudi-sand-soft: #fcf3e1;
+    --saudi-sand-border: #ead2a6;
+    --saudi-sand-text: #854d0e;
+    --saudi-volcanic: #2b2926;
+    --saudi-volcanic-hover: #3d3935;
+    --saudi-ring-track: #e4dac6;
+  }
+
+  /* Dark mode: Harrat volcanic basalt, moonlit dunes & night oasis palm */
+  html.dark {
+    --saudi-canvas: #0f1311;
+    --saudi-surface: #171d1a;
+    --saudi-subtle: #1f2723;
+    --saudi-hover: #27322d;
+    --saudi-border: #2c3832;
+    --saudi-border-strong: #3c4d45;
+    --saudi-ink: #f3ede0;
+    --saudi-ink-secondary: #d5cfc1;
+    --saudi-muted: #9da89f;
+    --saudi-palm: #10b981;
+    --saudi-palm-hover: #059669;
+    --saudi-palm-soft: #162c22;
+    --saudi-palm-border: #23533f;
+    --saudi-palm-text: #6ee7b7;
+    --saudi-sand-accent: #d97706;
+    --saudi-sand-soft: #271f13;
+    --saudi-sand-border: #6b4c1d;
+    --saudi-sand-text: #fbbf24;
+    --saudi-volcanic: #10b981;
+    --saudi-volcanic-hover: #059669;
+    --saudi-ring-track: #26332d;
+  }
+
+  html {
+    font-family: var(--font-sans);
+    scroll-behavior: smooth;
+    background-color: var(--saudi-canvas);
+    color: var(--saudi-ink);
+  }
+
+  body {
+    background-color: var(--saudi-canvas);
+    color: var(--saudi-ink);
+    transition: background-color 200ms ease, color 200ms ease;
+  }
+
+  html[dir="ltr"] {
+    --font-display: "Plus Jakarta Sans", system-ui, sans-serif;
+    --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5 {
+    font-family: var(--font-display);
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Subtle Saudi desert-dune, volcanic basalt & oasis horizon pattern */
+.saudi-nature-backdrop {
+  background-image:
+    radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--saudi-palm) 7%, transparent) 0%, transparent 38%),
+    radial-gradient(circle at 88% 14%, color-mix(in srgb, var(--saudi-sand-accent) 7%, transparent) 0%, transparent 34%);
+}
